@@ -21,16 +21,22 @@
                     :class="{outside: currentMonth !== day.month}"
                     v-for="(day, index) in week" 
                     :key ="index"
+                    @drop="dragEnd($event, day.day)"
+                    @dragover.prevent
                 >
                     <div class="calendar-day">
                         {{ day.date }}
                     </div>
                     <div v-for="dayEvent in day.dayEvents" :key="dayEvent.id">
                         <div
+                            v-if="dayEvent.width"
                             class="calendar-event"
-                            :style="`background-color:${dayEvent.color}`">
+                            :style="`width:${dayEvent.width}%;background-color:${dayEvent.color}`"
+                            draggable="true"
+                            @dragstart="dragStart($event, dayEvent.id)">
                             {{ dayEvent.name }}
                         </div>
+                        <div v-else style="height:26px"></div>
                     </div>
                 </div>
             </div>
@@ -46,25 +52,25 @@ export default {
         return {
             currentDate: moment(),
             events: [
-                { id: 1, name: "ミーティング", start: "2021-01-01", end:"2021-01-01", color:"blue"},
-                { id: 2, name: "イベント", start: "2021-01-02", end:"2021-01-03", color:"limegreen"},
-                { id: 3, name: "会議", start: "2021-01-06", end:"2021-01-06", color:"deepskyblue"},
-                { id: 4, name: "有給", start: "2021-01-08", end:"2021-01-08", color:"dimgray"},
-                { id: 5, name: "海外旅行", start: "2021-01-08", end:"2021-01-11", color:"navy"},
-                { id: 6, name: "誕生日", start: "2021-01-16", end:"2021-01-16", color:"orange"},
-                { id: 7, name: "イベント", start: "2021-01-12", end:"2021-01-15", color:"limegreen"},
-                { id: 8, name: "出張", start: "2021-01-12", end:"2021-01-13", color:"teal"},
-                { id: 9, name: "客先訪問", start: "2021-01-14", end:"2021-01-14", color:"red"},
-                { id: 10, name: "パーティ", start: "2021-01-15", end:"2021-01-15", color:"royalblue"},
-                { id: 12, name: "ミーティング", start: "2021-01-18", end:"2021-01-19", color:"blue"},
-                { id: 13, name: "イベント", start: "2021-01-21", end:"2021-01-21", color:"limegreen"},
-                { id: 14, name: "有給", start: "2021-01-20", end:"2021-01-20", color:"dimgray"},
-                { id: 15, name: "イベント", start: "2021-01-25", end:"2021-01-28", color:"limegreen"},
-                { id: 16, name: "会議", start: "2021-01-21", end:"2021-01-21", color:"deepskyblue"},
-                { id: 17, name: "旅行", start: "2021-01-23", end:"2021-01-24", color:"navy"},
-                { id: 18, name: "ミーティング", start: "2021-01-28", end:"2021-01-28", color:"blue"},
-                { id: 19, name: "会議", start: "2021-01-12", end:"2021-01-12", color:"deepskyblue"},
-                { id: 20, name: "誕生日", start: "2021-01-30", end:"2021-01-30", color:"orange"},
+                { id: 1, name: "ミーティング", start: "2022-01-01", end:"2022-01-01", color:"blue"},
+                { id: 2, name: "イベント", start: "2022-01-02", end:"2022-01-03", color:"limegreen"},
+                { id: 3, name: "会議", start: "2022-01-06", end:"2022-01-06", color:"deepskyblue"},
+                { id: 4, name: "有給", start: "2022-01-08", end:"2022-01-08", color:"dimgray"},
+                { id: 5, name: "海外旅行", start: "2022-01-08", end:"2022-01-11", color:"navy"},
+                { id: 6, name: "誕生日", start: "2022-01-16", end:"2022-01-16", color:"orange"},
+                { id: 7, name: "イベント", start: "2022-01-12", end:"2022-01-15", color:"limegreen"},
+                { id: 8, name: "出張", start: "2022-01-12", end:"2022-01-13", color:"teal"},
+                { id: 9, name: "客先訪問", start: "2022-01-14", end:"2022-01-14", color:"red"},
+                { id: 10, name: "パーティ", start: "2022-01-15", end:"2022-01-15", color:"royalblue"},
+                { id: 12, name: "ミーティング", start: "2022-01-18", end:"2022-01-19", color:"blue"},
+                { id: 13, name: "イベント", start: "2022-01-21", end:"2022-01-21", color:"limegreen"},
+                { id: 14, name: "有給", start: "2022-01-20", end:"2022-01-20", color:"dimgray"},
+                { id: 15, name: "イベント", start: "2022-01-25", end:"2022-01-28", color:"limegreen"},
+                { id: 16, name: "会議", start: "2022-01-21", end:"2022-01-21", color:"deepskyblue"},
+                { id: 17, name: "旅行", start: "2022-01-23", end:"2022-01-24", color:"navy"},
+                { id: 18, name: "ミーティング", start: "2022-01-28", end:"2022-01-28", color:"blue"},
+                { id: 19, name: "会議", start: "2022-01-12", end:"2022-01-12", color:"deepskyblue"},
+                { id: 20, name: "誕生日", start: "2022-01-30", end:"2022-01-30", color:"orange"},
             ]
         };
     },
@@ -92,11 +98,12 @@ export default {
           for (let week = 0; week < weekNumber; week++) {
               let weekRow = [];
               for (let day = 0; day < 7; day++) {
-                  let dayEvents = this.getDayEvents(startDate)
+                  let dayEvents = this.getDayEvents(startDate, day)
                   weekRow.push({
+                      day: startDate.get("YYYY-MM-DD"),
                       date: startDate.get("date"),
                       month: startDate.format("YYYY-MM"),
-                      dayEvents
+                      dayEvents:dayEvents,
                   });
                   startDate.add(1, "days");
               }
@@ -114,6 +121,7 @@ export default {
           const week = ["日", "月", "火", "水", "木", "金", "土"];
           return week[dayIndex];
       },
+      /*
         getDayEvents(date){
         return this.events.filter(event => {
             let startDate = moment(event.start).format('YYYY-MM-DD')
@@ -121,7 +129,80 @@ export default {
             let Date = date.format('YYYY-MM-DD')
             if(startDate <= Date && endDate >= Date) return true;
         });
-        }
+      }*///予定を記述。連続する予定がズレる
+      
+      /*getDayEvents(data) {
+          let dayEvents = [];
+          this.events.forEach(event => {
+              let startDate = moment(event.start).format('YYYY-MM-DD')
+              let Date = data.format('YYYY-MM-DD')
+              if(startDate == Date) {
+                  dayEvents.push(event)
+              }
+          });
+          return dayEvents;
+      }*///予定の最初の日だけを記述
+      getDayEvents(date, day){
+          let stackIndex = 0;
+          let dayEvents = [];
+          let startedEvents = [];
+          this.sortedEvents.forEach(event => {
+              let startDate = moment(event.start).format('YYYY-MM-DD')
+              let endDate = moment(event.end).format('YYYY-MM-DD')
+              let Date = date.format('YYYY-MM-DD')
+
+              if(startDate == Date) {
+                  //let betweenDays = moment(endDate).diff(moment(startDate), "days")
+                  //let width = betweenDays * 100 + 95;
+                  let width = this.getEventWidth(startDate, endDate, day)
+                  dayEvents.push({...event,width})
+              }
+            
+            /*if(startDate <= Date && endDate >= Date){
+                if(startDate === Date) {
+                  [stackIndex, dayEvents] = this.getStackEvents(event, day, stackIndex, dayEvents, startedEvents, event.start);
+                  //let width = this.getEventWidth(startDate, endDate, day)
+                  //dayEvents.push({...event,width})
+                }else if(day === 0) {
+                  [stackIndex, dayEvents] = this.getStackEvents(event, day, stackIndex, dayEvents, startedEvents, Date);
+                  //let width = this.getEventWidth(date, endDate, day)
+                  //dayEvents.push({...event, width})
+                }else{
+                    startedEvents.push(event)
+                }
+            }*/
+          });
+            return dayEvents;
+      },
+      getEventWidth(end, start, day){
+          let betweenDays = moment(start).diff(moment(end), "days")
+          if(betweenDays > 6 - day) {
+              return (6 - day) * 100 + 95;
+          } else {
+              return betweenDays * 100 + 95;
+          }
+      }
+    },
+    getStackEvents(event, day, stackIndex, dayEvents, startedEvents, start){
+        [stackIndex, dayEvents] = this.getStartedEvents(stackIndex, startedEvents, dayEvents)
+        let width = this.getEventWidth(start, event.end, day)
+        Object.assign(event, {
+            stackIndex
+        })
+        dayEvents.push({...event, width})
+        stackIndex++;
+        return [stackIndex, dayEvents];
+    },
+    getStartedEvents(stackIndex, startedEvents, dayEvents) {
+        let startedEvent;
+        do{
+            startedEvent = startedEvents.find(event => event.stackIndex === stackIndex)
+            if(startedEvent) {
+                dayEvents.push(startedEvent)
+                stackIndex++;
+            }
+        }while(typeof startedEvent !== 'undefined')
+        return [stackIndex, dayEvents]
     },
     mounted(){
         console.log(this.getCalendar());
@@ -132,6 +213,22 @@ export default {
         //console.log(this.getStartDate())
         //console.log(this.getEndDate())
     },
+    dragStart(event, eventId){
+        
+        event.dataTransfer.effectAllowed = "move";
+        event.dataTransfer.dropEffect = "move";
+        event.dataTransfer.setData("eventId", eventId);
+        console.log(eventId);
+    },
+    dragEnd(event, date){
+        let eventId = event.dataTransfer.getData("eventId");
+        let dragEvent = this.events.find(event=>event.id==eventId)
+        let betweenDays = moment(dragEvent.end).diff(moment(dragEvent.start), "days");
+        dragEvent.start = date;
+        dragEvent.end = moment(dragEvent.start).add(betweenDays, "days").format("YYYY-MM-DD");
+        console.log(event.dataTransfer.getData("eventId"));
+        console.log(date);
+    },
     computed: {
         calendars() {
             return this.getCalendar();
@@ -141,6 +238,15 @@ export default {
         },
         currentMonth(){
             return this.currentDate.format('YYYY-MM')
+        },
+        sortedEvents(){
+            return this.events.slice().sort(function(a,b) {
+                let startDate = moment(a.start).format('YYYY-MM-DD')
+                let startDate_2 = moment(b.start).format('YYYY-MM-DD')
+                if( startDate < startDate_2) return -1;
+                if( startDate > startDate_2) return 1;
+                return 0;
+            })
         },
     },
 }
@@ -192,5 +298,9 @@ export default {
         margin-bottom:1px;
         height:25px;
         line-height:25px;
+        position:relative;
+        z-index:1;
+        border-radius:4px;
+        padding-left:4px;
     }
 </style>
